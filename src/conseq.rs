@@ -2,80 +2,99 @@
 
 use criterion::Criterion;
 
-fn longest_con_seq(s1: &str, s2: &str) -> String {
-    let mut max: Option<String> = None; // Holds value of string with maximum length
-    let mut current = String::new(); // String container to hold current longest value
-    let mut s1_iter = s1.chars().peekable(); // Peekable iterator for string s1
-    let mut s2_iter = s2.chars(); //Iterator for string s2
-    let mut s2_prev_pos = s2_iter.clone(); // Iterator that holds position of previous location of first iterator
-    let mut s1_prev_pos = s1_iter.clone(); // Peekable iterator used to make sure all possible combinations are located.
+pub fn longest_match(s1: &str, s2: &str) -> Option<String> {
+    let m1 = longest_s2_in_s1(s1, s2);
+    let m2 = longest_s2_in_s1(s2, s1);
 
-    loop {
-        let s1_char = s1_iter.next(); // Get character in s1
+    match (m1, m2) {
+	(None, None) => None,
+	(Some(s1), None) => Some(s1),
+	(None, Some(s2)) => Some(s2),
+	(Some(s1), Some(s2)) => if s1.len() >= s2.len() {Some(s1)} else {Some(s2)}
+    }
+}
 
-        if current.is_empty() {
-            // If no consecutive string found yet store location of iterator
-            s1_prev_pos = s1_iter.clone()
+
+/// Longest match of s2 in s1
+fn longest_s2_in_s1(s1: &str, s2: &str) -> Option<String> {    
+    let mut max: Option<String> = None; 
+    let mut current = String::new(); 
+    let mut s1_outer = s1.chars().peekable();
+
+    while s1_outer.peek() != None {
+
+	current.clear();
+
+	let mut s1_inner = s1_outer.clone();
+	let mut s2_iter = s2.chars(); 
+
+	while s1_inner.peek() != None {
+            if let Some(s1_char) = s1_inner.next() {
+		match s2_iter.next() {
+                    Some(s2_char) if s1_char == s2_char => 
+			current.push(s1_char),
+		    _ => break,
+		}
+	    }
+	}
+	
+	if !current.is_empty() && max.as_ref().map_or(true, |s| s.len() < current.len()) {
+            max = Some(current.clone());
         }
 
-        match s1_char {
-            Some(s1_char) => loop {
-                match s2_iter.next() {
-                    Some(s2_char) if s1_char == s2_char => {
-                        current.push(s1_char);
-                        s2_prev_pos = s2_iter.clone();
-                        break;
-                    }
-                    Some(_) => continue,
-                    None => {
-                        s2_iter = s2_prev_pos.clone();
-                        break;
-                    }
-                }
-            },
-            None => match s1_prev_pos.peek() {
-                Some(_) => {
-                    if max.as_ref().map_or(true, |s| s.len() < current.len()) {
-                        max = Some(current.clone());
-                    }
-                    current.clear();
-
-                    s1_iter = s1_prev_pos.clone();
-                    s2_iter = s2.chars();
-                }
-                None => break,
-            },
-        }
+	s1_outer.next();
     }
 
-    max.unwrap_or_default()
+    max
+
+    // max.unwrap_or_default()
 }
 
 fn criterion_benchmark(c: &mut Criterion) {
     let s1 = "GXTKAYB";
-    let s2 = "AGGTAB";
-    c.bench_function("Benchmark", move |b| b.iter(|| longest_con_seq(s1, s2)));
+    let s2 = "TKAB";
+    c.bench_function("Benchmark", move |b| b.iter(|| longest_match(s1, s2)));
 }
 
 criterion_group!(benches, criterion_benchmark);
 criterion_main!(benches);
 
 #[test]
-fn example_1() {
-    assert_eq!(longest_con_seq("ABAZDC", "BACBAD"), "ABAD");
+fn t1() {
+    assert_eq!(longest_match("BABAZDC", "BAZBAD"), Some("BAZ".to_string()));
 }
 
 #[test]
-fn example_2() {
-    assert_eq!(longest_con_seq("AGGTAB", "GXTKAYB"), "GTAB");
+fn t2() {
+    assert_eq!(longest_match("AGGTAB", "GTAYB"), Some("GTA".to_string()));
 }
 
 #[test]
-fn example_3() {
-    assert_eq!(longest_con_seq("aaaa", "aa"), "aa");
+fn t3() {
+    assert_eq!(longest_match("aaaa", "aa"), Some("aa".to_string()));
 }
 
 #[test]
-fn example_4() {
-    assert_eq!(longest_con_seq("ABBA", "ABJABA"), "ABBA");
+fn t4() {
+    assert_eq!(longest_match("ABBA", "ABBA"), Some("ABBA".to_string()));
+}
+
+#[test]
+fn t5() {
+    assert_eq!(longest_match("ABCD", "EF"), None);
+}
+
+#[test]
+fn t6() {
+    assert_eq!(longest_match("a", "a"), Some("a".to_string()));
+}
+
+#[test]
+fn t7() {
+    assert_eq!(longest_match("cabcabb", "abb"), Some("abb".to_string()));
+}
+
+#[test]
+fn t8() {
+    assert_eq!(longest_match("abb", "cabcabb"), Some("abb".to_string()));
 }
