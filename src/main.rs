@@ -5,6 +5,8 @@ mod conseq;
 mod train;
 mod repeats;
 
+mod meb;
+
 use std::env;
 use std::fs;
 use crate::train::train;
